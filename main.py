@@ -1,110 +1,104 @@
 import streamlit as st
 
-# --- إعدادات الصفحة الأساسية ---
-st.set_page_config(
-    page_title="Football Incident Analytics",
-    page_icon="⚽",
-    layout="wide"
-)
+# ضبط إعدادات الصفحة لتكون بعرض الشاشة (Wide Mode)
+st.set_page_config(page_title="Football Incident Analytics", layout="wide")
 
-# --- القائمة الجانبية (Sidebar) ---
-st.sidebar.title("🕹️ Control Panel")
+# --- 1. قاعدة البيانات التجريبية للمباريات والفيديوهات ---
+# ملاحظة: يمكنك استبدال روابط الفيديوهات هنا بروابط فيديوهات المباريات الحقيقية الخاصة بك لاحقاً
+matches_data = {
+    "Match 01 - Team A vs Team B": {
+        "video_main": "https://www.w3schools.com/html/mov_bbb.mp4", # فيديو الأرنب مؤقتاً لمباراة 1
+        "video_tactical": "https://www.w3schools.com/html/mov_bbb.mp4",
+        "video_behind": "https://www.w3schools.com/html/mov_bbb.mp4",
+        "timestamp": "00:42:15.320 (42nd Minute)",
+        "period": "First Half (الشوط الأول)",
+        "team": "TEAM_A",
+        "player": "PLAYER_ID_995 (Right Wing / Center Forward)",
+        "xg": "0.35 (Low Chance)"
+    },
+    "Match 02 - Team C vs Team D": {
+        "video_main": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4", # فيديو تجريبي مختلف لمباراة 2
+        "video_tactical": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+        "video_behind": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+        "timestamp": "00:15:22.100 (15th Minute)",
+        "period": "First Half (الشوط الأول)",
+        "team": "TEAM_C (Barcelona)",
+        "player": "PLAYER_ID_010 (Lionel Messi / Center Forward)",
+        "xg": "0.68 (High Chance)"
+    }
+}
 
-# 1. اختيار حدث المباراة
-st.sidebar.subheader("Select Match Event:")
-match_event = st.sidebar.selectbox(
-    "Choose Event",
-    ["Match 01 - Team A vs Team B", "Match 02 - Team C vs Team D"],
-    label_visibility="collapsed"
-)
+# --- 2. تصميم الواجهة (تقسيم الشاشة إلى أعمدة) ---
+# العمود الأيسر: لوحة التحكم (Sidebar / Control Panel)
+with st.sidebar:
+    st.header("🕹️ Control Panel")
+    
+    # القائمة المنسدلة لاختيار المباراة
+    selected_match = st.selectbox(
+        "Select Match Event:", 
+        options=list(matches_data.keys())
+    )
+    
+    # جلب بيانات المباراة المختارة حالياً
+    current_match = matches_data[selected_match]
+    
+    st.markdown("---")
+    st.subheader("🔒 Security & Privacy")
+    st.toggle("Anonymize Player Data (GDPR Mode)", value=True)
+    
+    st.markdown("---")
+    st.success("✓ System Status: Operational & Live")
 
-st.sidebar.markdown("---")
+# تقسيم بقية الشاشة إلى عمودين (المنتصف للفيديو، واليمين للبيانات)
+col_video, col_data = st.columns([3, 2])
 
-# 2. قسم الأمان والخصوصية (GDPR)
-st.sidebar.subheader("🔒 Security & Privacy")
-anonymize_gdpr = st.sidebar.toggle(
-    "Anonymize Player Data (GDPR Mode)", 
-    value=True
-)
-
-st.sidebar.markdown("---")
-
-# 3. حالة النظام العامة (تجريد البنية التحتية)
-st.sidebar.success("✓ System Status: Operational & Live")
-
-
-# --- القسم الرئيسي من الواجهة (Main Dashboard) ---
-st.title("⚽ Football Incident Analytics Dashboard")
-st.markdown("---")
-
-# صف المؤشرات العليا (High-Level Status Summaries)
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.metric(label="Total Logged Incidents", value="1,024 Events")
-
-with col2:
-    st.metric(label="System Sync Speed", value="Excellent", delta="↑ 42 ms (Stable)")
-
-with col3:
-    st.metric(label="Available Camera Angles", value="Multi-cam Enabled")
-
-st.markdown("---")
-
-# تقسيم الشاشة إلى قسمين: الفيديو على اليسار والبيانات على اليمين
-body_col1, body_col2 = st.columns([3, 2])
-
-with body_col1:
+# --- 3. عمود الفيديو (المنتصف) ---
+with col_video:
     st.subheader("📹 Multi-Angle Video Feed")
     
-    # اختيار زاوية الكاميرا تفرع من الباك إند
-    camera_angle = st.radio(
-        "Select Camera View:",
+    # أزرار اختيار زاوية الكاميرا
+    camera_view = st.radio(
+        "Select Camera View:", 
         ["Main Broadcast Angle", "Tactical High-Cam", "Behind-the-Goal View"],
         horizontal=True
     )
     
-    # عرض مشغل الفيديو المباشر والنظيف بدلاً من الأكواد المكسورة القديمة
-    st.video("https://www.w3schools.com/html/mov_bbb.mp4")
-    st.caption(f"Streaming: {camera_angle}")
+    # تحديد رابط الفيديو بناءً على الكاميرا المختارة
+    if camera_view == "Main Broadcast Angle":
+        video_url = current_match["video_main"]
+    elif camera_view == "Tactical High-Cam":
+        video_url = current_match["video_tactical"]
+    else:
+        video_url = current_match["video_behind"]
+        
+    # عرض الفيديو
+    st.video(video_url)
+    st.caption(f"Streaming: {camera_view}")
 
-with body_col2:
+# --- 4. عمود البيانات الإحصائية StatsBomb (اليمين) ---
+with col_data:
     st.subheader("📋 Detailed Event Information (StatsBomb Core)")
     
-    # تطبيق منطق الـ GDPR ديناميكياً بناءً على اختيار القائمة الجانبية
-    if anonymize_gdpr:
-        player_name = "[PROTECTED - PLAYER_ID_995]"
-        team_name = "[PROTECTED - TEAM_A]"
-        st.warning("GDPR Masking Layer Active: Player profile attributes tokenized automatically.")
-    else:
-        player_name = "Lionel Messi"
-        team_name = "Barcelona"
-        st.info("Raw Mode: Elevated access granted. Displaying full StatsBomb metadata profiles.")
-        
-    # بطاقة البيانات التفصيلية الشاملة للحدث
+    st.info("GDPR Masking Layer Active: Player profile attributes tokenized automatically.")
+    
+    # عرض البيانات بشكل ديناميكي وإصلاح أكواد الـ HTML المكسورة باستخدام unsafe_allow_html
     st.markdown(f"""
-    <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border-left: 5px solid #1a365d; color: #2c3e50;">
-        <h4 style="margin-top:0; color: #1a365d; font-size: 14px;">⚽ Match & Possession Context</h4>
-        <ul style="font-size: 13px; padding-left: 20px; margin-bottom: 10px;">
-            <li><b>Timestamp:</b> 00:42:15.320 (42nd Minute)</li>
-            <li><b>Period:</b> First Half (الشوط الأول)</li>
-            <li><b>Possession Team:</b> {team_name} (Possession #24)</li>
-            <li><b>Player & Position:</b> {player_name} (Right Wing / Center Forward)</li>
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 5px solid #1a365d;">
+        <h4 style="margin-top: 0; color: #1a365d;"><a href="#">⚽ Match & Possession Context</a></h4>
+        <ul style="list-style-type: none; padding-left: 0; font-size: 14px; line-height: 1.8;">
+            <li><b>Timestamp:</b> {current_match['timestamp']}</li>
+            <li><b>Period:</b> {current_match['period']}</li>
+            <li><b>Possession Team:</b> <span style="color: #c53030;">[PROTECTED - {current_match['team']}]</span> (Possession #24)</li>
+            <li><b>Player & Position:</b> <span style="color: #c53030;">[PROTECTED - {current_match['player']}]</span></li>
         </ul>
         
-        <h4 style="color: #1a365d; font-size: 14px;">🎯 Spatial & Tactical Data (إحداثيات الـ VAR)</h4>
-        <ul style="font-size: 13px; padding-left: 20px; margin-bottom: 10px;">
-            <li><b>Event Location [X, Y]:</b> [102.5, 44.1] - <i>Inside Attacking Third</i></li>
-            <li><b>Event Type:</b> Shot (تسديدة على المرمى)</li>
-            <li><b>Expected Goals (StatsBomb xG):</b> <span style="color: #2b6cb0; font-weight: bold;">0.68 (High Chance)</span></li>
-            <li><b>Shot Technique & Body Part:</b> Volley / Left Foot</li>
-        </ul>
-
-        <h4 style="color: #d69e2e; font-size: 14px;">⚠️ VAR Review Specifics (تفاصيل المخالفة المحتملة)</h4>
-        <ul style="font-size: 13px; padding-left: 20px; margin-bottom: 0;">
-            <li><b>Shot Outcome:</b> Saved (تم التصدي لها - فحص احتمالية لمسة يد/تسلل)</li>
-            <li><b>Foul Committed/Involved:</b> Hand Block Claim by Defender</li>
-            <li><b>Resolution Status:</b> Reviewed & Logged</li>
+        <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+        
+        <h4 style="color: #1a365d;">Detailed Event Metrics:</h4>
+        <ul style="font-size: 14px; line-height: 1.8;">
+            <li><b>Event Location:</b> [X: 85.3, Y: 42.1]</li>
+            <li><b>Event Type:</b> Shot</li>
+            <li><b>Expected Goals (xG):</b> <span style="color: green; font-weight: bold; font-size: 16px;">{current_match['xg']}</span></li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
