@@ -1,46 +1,37 @@
 import streamlit as st
+import pandas as pd
+from statsbombpy import sb
 
-# ضبط إعدادات الصفحة لتكون بعرض الشاشة (Wide Mode)
-st.set_page_config(page_title="Football Incident Analytics", layout="wide")
+# ضبط إعدادات الصفحة
+st.set_page_config(page_title="Football Incident Analytics - StatsBomb", layout="wide")
 
-# --- 1. قاعدة البيانات التجريبية للمباريات والفيديوهات ---
-# ملاحظة: يمكنك استبدال روابط الفيديوهات هنا بروابط فيديوهات المباريات الحقيقية الخاصة بك لاحقاً
-matches_data = {
-    "Match 01 - Team A vs Team B": {
-        "video_main": "https://www.w3schools.com/html/mov_bbb.mp4", # فيديو الأرنب مؤقتاً لمباراة 1
-        "video_tactical": "https://www.w3schools.com/html/mov_bbb.mp4",
-        "video_behind": "https://www.w3schools.com/html/mov_bbb.mp4",
-        "timestamp": "00:42:15.320 (42nd Minute)",
-        "period": "First Half (الشوط الأول)",
-        "team": "TEAM_A",
-        "player": "PLAYER_ID_995 (Right Wing / Center Forward)",
-        "xg": "0.35 (Low Chance)"
-    },
-    "Match 02 - Team C vs Team D": {
-        "video_main": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4", # فيديو تجريبي مختلف لمباراة 2
-        "video_tactical": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-        "video_behind": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-        "timestamp": "00:15:22.100 (15th Minute)",
-        "period": "First Half (الشوط الأول)",
-        "team": "TEAM_C (Barcelona)",
-        "player": "PLAYER_ID_010 (Lionel Messi / Center Forward)",
-        "xg": "0.68 (High Chance)"
+# --- 1. جلب بيانات StatsBomb المفتوحة مع التخزين المؤقت ---
+@st.cache_data
+def get_statsbomb_matches():
+    # استدعاء مباراتين شهيرتين كمثال (مثلاً نهائي كأس العالم ونهائي أبطال أوروبا)
+    # يمكن توسيع هذه القائمة حسب الحاجة
+    return {
+        "Match 01 - Argentina vs France (World Cup Final)": 3869151,
+        "Match 02 - Real Madrid vs Liverpool (UCL Final)": 3775541
     }
-}
 
-# --- 2. تصميم الواجهة (تقسيم الشاشة إلى أعمدة) ---
-# العمود الأيسر: لوحة التحكم (Sidebar / Control Panel)
+@st.cache_data
+def get_match_events(match_id):
+    # جلب جميع الأحداث الخاصة بالمباراة من StatsBomb
+    events = sb.events(match_id=match_id)
+    # تصفية الأحداث المهمة (تسديدات، أخطاء، ضربات جزاء)
+    filtered = events[events['type'].isin(['Shot', 'Foul Committed', 'Penalty'])]
+    return filtered
+
+matches_dict = get_statsbomb_matches()
+
+# --- 2. لوحة التحكم الجانبية (Control Panel) ---
 with st.sidebar:
     st.header("🕹️ Control Panel")
     
-    # القائمة المنسدلة لاختيار المباراة
-    selected_match = st.selectbox(
-        "Select Match Event:", 
-        options=list(matches_data.keys())
-    )
-    
-    # جلب بيانات المباراة المختارة حالياً
-    current_match = matches_data[selected_match]
+    # اختيار المباراة
+    selected_match_name = st.selectbox("Select Match Event:", options=list(matches_dict.keys()))
+    selected_match_id = matches_dict[selected_match_name]
     
     st.markdown("---")
     st.subheader("🔒 Security & Privacy")
@@ -49,56 +40,61 @@ with st.sidebar:
     st.markdown("---")
     st.success("✓ System Status: Operational & Live")
 
-# تقسيم بقية الشاشة إلى عمودين (المنتصف للفيديو، واليمين للبيانات)
+# جلب الأحداث الخاصة بالمباراة المختارة
+df_events = get_match_events(selected_match_id)
+
+# أخذ أول حدث مهم في القائمة لعرض بياناته
+first_event = df_events.iloc[0]
+
+# --- 3. تقسيم الصفحة إلى عمودين ---
 col_video, col_data = st.columns([3, 2])
 
-# --- 3. عمود الفيديو (المنتصف) ---
+# --- عمود الفيديو (المنتصف) ---
 with col_video:
     st.subheader("📹 Multi-Angle Video Feed")
     
-    # أزرار اختيار زاوية الكاميرا
     camera_view = st.radio(
         "Select Camera View:", 
         ["Main Broadcast Angle", "Tactical High-Cam", "Behind-the-Goal View"],
         horizontal=True
     )
     
-    # تحديد رابط الفيديو بناءً على الكاميرا المختارة
-    if camera_view == "Main Broadcast Angle":
-        video_url = current_match["video_main"]
-    elif camera_view == "Tactical High-Cam":
-        video_url = current_match["video_tactical"]
-    else:
-        video_url = current_match["video_behind"]
-        
-    # عرض الفيديو
+    # رابط فيديو المباراة (ملاحظة: لقطات الفيديو يتم ربطها بملفات الفيديو الخاصة بالمباراة)
+    # نستخدم مقطع تجريبي ثابت حالياً لمزامنة العرض مع البيانات
+    video_url = "https://www.w3schools.com/html/mov_bbb.mp4"
     st.video(video_url)
-    st.caption(f"Streaming: {camera_view}")
+    st.caption(f"Streaming Camera Angle: {camera_view}")
 
-# --- 4. عمود البيانات الإحصائية StatsBomb (اليمين) ---
+# --- عمود بيانات StatsBomb (اليمين) ---
 with col_data:
     st.subheader("📋 Detailed Event Information (StatsBomb Core)")
     
     st.info("GDPR Masking Layer Active: Player profile attributes tokenized automatically.")
     
-    # عرض البيانات بشكل ديناميكي وإصلاح أكواد الـ HTML المكسورة باستخدام unsafe_allow_html
+    # استخراج البيانات الديناميكية المباشرة من StatsBomb
+    minute = first_event.get('minute', 'N/A')
+    second = first_event.get('second', 'N/A')
+    team_name = first_event.get('team', 'N/A')
+    player_name = first_event.get('player', 'N/A')
+    event_type = first_event.get('type', 'N/A')
+    
+    # استخراج قيم Expected Goals (xG) في حال كانت تسديدة
+    xg_val = "N/A"
+    if 'shot_statsbomb_xg' in first_event and pd.notnull(first_event['shot_statsbomb_xg']):
+        xg_val = round(first_event['shot_statsbomb_xg'], 2)
+
+    # عرض البيانات بتنسيق Markdown نظيف وبدون أكواد مكسورة
     st.markdown(f"""
-    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 5px solid #1a365d;">
-        <h4 style="margin-top: 0; color: #1a365d;"><a href="#">⚽ Match & Possession Context</a></h4>
-        <ul style="list-style-type: none; padding-left: 0; font-size: 14px; line-height: 1.8;">
-            <li><b>Timestamp:</b> {current_match['timestamp']}</li>
-            <li><b>Period:</b> {current_match['period']}</li>
-            <li><b>Possession Team:</b> <span style="color: #c53030;">[PROTECTED - {current_match['team']}]</span> (Possession #24)</li>
-            <li><b>Player & Position:</b> <span style="color: #c53030;">[PROTECTED - {current_match['player']}]</span></li>
-        </ul>
-        
-        <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
-        
-        <h4 style="color: #1a365d;">Detailed Event Metrics:</h4>
-        <ul style="font-size: 14px; line-height: 1.8;">
-            <li><b>Event Location:</b> [X: 85.3, Y: 42.1]</li>
-            <li><b>Event Type:</b> Shot</li>
-            <li><b>Expected Goals (xG):</b> <span style="color: green; font-weight: bold; font-size: 16px;">{current_match['xg']}</span></li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    ### ⚽ Match & Possession Context
+    * **Timestamp:** Minute {minute}:{second}
+    * **Possession Team:** [PROTECTED - {team_name}]
+    * **Player & Position:** [PROTECTED - {player_name}]
+    """)
+    
+    st.markdown("---")
+    
+    st.markdown(f"""
+    #### Detailed Event Metrics:
+    * **Event Type:** {event_type}
+    * **Expected Goals (xG):** **{xg_val}**
+    """)tml=True)
