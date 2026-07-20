@@ -97,4 +97,4 @@ with col_data:
     #### Detailed Event Metrics:
     * **Event Type:** {event_type}
     * **Expected Goals (xG):** **{xg_val}**
-    """)tml=True)
+    """)
