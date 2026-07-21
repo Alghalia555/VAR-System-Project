@@ -9,33 +9,57 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- جلب البيانات المباشرة من StatsBomb ---
+# --- جلب كافة المباريات المتاحة من StatsBomb ---
 @st.cache_data
-def load_statsbomb_event():
+def get_all_statsbomb_matches():
     try:
-        # جلب أحداث مباراة مجانية معينة من StatsBomb (مثل أحداث مباراة محددة)
-        # استخدام مباراة من كاس العالم أو الدوري لبيانات حقيقية
-        events = sb.events(match_id=3788741)  # مباراة حقيقية من بيانات StatsBomb المجانية
-        # تصفية الأحداث للحصول على تسديدة (Shot) تحتوي على تفاصيل غنية
+        # جلب قائمة المسابقات المجانية المتاحة
+        competitions = sb.competitions()
+        matches_list = {}
+        # جلب مباريات أول بضع مسابقات متوفرة لملء القائمة بآلاف المباريات
+        for _, comp in competitions.head(10).iterrows():
+            try:
+                m = sb.matches(competition_id=comp['competition_id'], season_id=comp['season_id'])
+                for _, match in m.iterrows():
+                    match_label = f"{match['home_team']} vs {match['away_team']} ({match['match_date']})"
+                    matches_list[match_label] = match['match_id']
+            except:
+                continue
+        return matches_list
+    except Exception as e:
+        # قائمة احتياطية في حال تعذر جلب الفهرس الكامل
+        return {
+            "Italy vs England (UEFA Euro 2020)": 3788741,
+            "Argentina vs France (World Cup 2022)": 3869685,
+            "Barcelona vs Real Madrid (La Liga)": 15946
+        }
+
+# --- جلب بيانات الأحداث للمباراة المختارة ---
+@st.cache_data
+def load_match_events(match_id):
+    try:
+        events = sb.events(match_id=match_id)
         shots = events[events['type'] == 'Shot']
         if not shots.empty:
-            selected_event = shots.iloc[0]
-            return selected_event, len(events)
-    except Exception as e:
-        pass
-    return None, 1024
+            return shots.iloc[0], len(events)
+        return events.iloc[0], len(events)
+    except:
+        return None, 3803
 
-event_data, total_events_count = load_statsbomb_event()
+matches_dict = get_all_statsbomb_matches()
 
 # --- القائمة الجانبية (Sidebar) ---
 st.sidebar.title("🕹️ Control Panel")
 
 st.sidebar.subheader("Select Match Event:")
-match_event = st.sidebar.selectbox(
+selected_match_name = st.sidebar.selectbox(
     "Choose Event",
-    ["StatsBomb Match ID: 3788741 (Live Stream)", "Match 02 - Offline Cache"],
-    label_visibility="collapsed"
+    options=list(matches_dict.keys()),
+    index=0
 )
+
+selected_match_id = matches_dict[selected_match_name]
+event_data, total_events_count = load_match_events(selected_match_id)
 
 st.sidebar.markdown("---")
 
@@ -79,7 +103,8 @@ with body_col1:
         horizontal=True
     )
     
-    st.video("https://www.w3schools.com/html/mov_bbb.mp4")
+    # رابط فيديو كرة قدم مجاني ومباشر
+    st.video("https://www.youtube.com/watch?v=2OEL4P5GeT4")
     st.caption(f"Streaming VAR Sync Angle: {camera_angle}")
 
 with body_col2:
@@ -89,7 +114,7 @@ with body_col2:
     if event_data is not None:
         raw_player = event_data.get('player', 'Unknown Player')
         raw_team = event_data.get('team', 'Unknown Team')
-        timestamp = event_data.get('timestamp', '00:42:15.320')
+        timestamp = str(event_data.get('timestamp', '00:02:09.222'))
         period = event_data.get('period', 1)
         location = event_data.get('location', [102.5, 44.1])
         event_type = event_data.get('type', 'Shot')
@@ -98,9 +123,8 @@ with body_col2:
         body_part = event_data.get('shot_body_part', 'Left Foot')
         outcome = event_data.get('shot_outcome', 'Saved')
     else:
-        # بيانات احتياطية في حال تعذر الاتصال بالسيرفر
-        raw_player, raw_team = "Lionel Messi", "Barcelona"
-        timestamp, period, location = "00:42:15.320", 1, [102.5, 44.1]
+        raw_player, raw_team = "Ciro Immobile", "Italy"
+        timestamp, period, location = "00:02:09.222", 1, [102.5, 44.1]
         event_type, xg, technique, body_part, outcome = "Shot", 0.68, "Volley", "Left Foot", "Saved"
 
     # تطبيق منطق الـ GDPR
@@ -113,7 +137,7 @@ with body_col2:
         team_name = raw_team
         st.info("Raw Mode: Elevated access granted. Displaying original StatsBomb profile.")
         
-    # عرض بطاقة البيانات الديناميكية
+    # عرض بطاقة البيانات التفاعلية
     st.markdown(f"""
     <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border-left: 5px solid #1a365d; color: #2c3e50;">
         <h4 style="margin-top:0; color: #1a365d; font-size: 14px;">⚽ Match & Possession Context</h4>
